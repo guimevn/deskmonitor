@@ -1,0 +1,6 @@
+.git
+.gitignore
+tests
+wrangler.jsonc
+README.md
+LICENSE
