@@ -2,7 +2,7 @@
 
 Monitor de postura, hidratação e foco que roda direto no navegador usando a webcam local e o MediaPipe Pose. Nenhum frame sai da sua máquina — todo o processamento acontece localmente em WebAssembly/WebGL.
 
-**Acesse online:** https://deskmonitor.vdnguime.workers.dev/
+**Acesse online:** https://deskmonitor.guimevn.workers.dev/
 
 ![Preview do DeskMonitor](assets/preview.png)
 
