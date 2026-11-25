@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeskMonitor — Monitor de Postura, Hidratacao e Foco (100% Local)</title>
+  <meta name="description" content="Monitor gratuito de postura, hidratacao e foco no navegador usando webcam local e MediaPipe Pose. 100% offline, sem backend e com Sakura Bonsai interativo.">
+  <meta name="keywords" content="posture monitor, ergonomics, mediapipe pose, webcam posture detector, hydration tracker, focus timer, local-first, monitor de postura">
+  <meta property="og:title" content="DeskMonitor — Monitor de Postura, Hidratacao e Foco">
+  <meta property="og:description" content="Monitor gratuito de postura, hidratacao e foco que roda 100% localmente no navegador via MediaPipe Pose.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="assets/preview.png">
+
+  <!-- Tipografia Editorial -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
+            sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google MediaPipe Pose CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
+  <link rel="stylesheet" href="src/css/main.css">
+</head>
+<body class="text-[#24171a] h-screen w-screen overflow-hidden flex flex-col font-sans antialiased selection:bg-[#fbcfe8] selection:text-[#24171a] relative">
+
+  <!-- Arte Botânica Sakura de Fundo (Canto Superior Direito e Inferior Esquerdo) -->
+  <svg aria-hidden="true" class="pointer-events-none fixed top-0 right-0 w-72 h-56 opacity-45 z-0" viewBox="0 0 320 240" fill="none">
+    <path d="M 320 20 Q 250 45 190 95 Q 150 125 110 135" stroke="#4a1c24" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M 245 55 Q 230 95 195 125" stroke="#4a1c24" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M 210 80 Q 175 65 145 78" stroke="#4a1c24" stroke-width="2" stroke-linecap="round"/>
+    <g fill="#f47292">
+      <circle cx="190" cy="95" r="10" opacity="0.85"/>
+      <circle cx="245" cy="55" r="12" opacity="0.9"/>
+      <circle cx="145" cy="78" r="8" opacity="0.8"/>
+      <circle cx="110" cy="135" r="9" opacity="0.85"/>
+      <circle cx="195" cy="125" r="10" opacity="0.8"/>
+      <circle cx="280" cy="36" r="11" opacity="0.85"/>
+    </g>
+    <g fill="#fff5f7">
+      <circle cx="190" cy="95" r="3.5"/>
+      <circle cx="245" cy="55" r="4"/>
+      <circle cx="145" cy="78" r="2.8"/>
+      <circle cx="110" cy="135" r="3"/>
+      <circle cx="195" cy="125" r="3.5"/>
+      <circle cx="280" cy="36" r="3.5"/>
+    </g>
+  </svg>
+
+  <svg aria-hidden="true" class="pointer-events-none fixed bottom-0 left-0 w-64 h-48 opacity-35 z-0" viewBox="0 0 280 200" fill="none">
+    <path d="M -10 185 Q 60 155 120 125 Q 165 102 205 112" stroke="#4a1c24" stroke-width="4" stroke-linecap="round"/>
+    <path d="M 75 148 Q 95 110 128 92" stroke="#4a1c24" stroke-width="2.2" stroke-linecap="round"/>
+    <g fill="#f47292">
+      <circle cx="120" cy="125" r="10" opacity="0.85"/>
+      <circle cx="205" cy="112" r="8" opacity="0.8"/>
+      <circle cx="128" cy="92" r="9" opacity="0.85"/>
+      <circle cx="62" cy="152" r="11" opacity="0.8"/>
+    </g>
+    <g fill="#fff5f7">
+      <circle cx="120" cy="125" r="3.2"/>
+      <circle cx="205" cy="112" r="2.8"/>
+      <circle cx="128" cy="92" r="3"/>
+      <circle cx="62" cy="152" r="3.5"/>
+    </g>
+  </svg>
+
+  <!-- Pétalas sutis flutuantes -->
+  <div aria-hidden="true" class="sakura-petal" style="left: 18%; animation-duration: 18s; animation-delay: 0s;">
+    <svg width="14" height="10" viewBox="0 0 14 10"><path d="M1 5C3 1 10 0 13 5C10 10 3 9 1 5Z" fill="#f47292" opacity="0.65"/></svg>
+  </div>
+  <div aria-hidden="true" class="sakura-petal" style="left: 52%; animation-duration: 22s; animation-delay: -6s;">
+    <svg width="12" height="8" viewBox="0 0 14 10"><path d="M1 5C3 1 10 0 13 5C10 10 3 9 1 5Z" fill="#ec4873" opacity="0.5"/></svg>
+  </div>
+  <div aria-hidden="true" class="sakura-petal" style="left: 82%; animation-duration: 16s; animation-delay: -11s;">
+    <svg width="13" height="9" viewBox="0 0 14 10"><path d="M1 5C3 1 10 0 13 5C10 10 3 9 1 5Z" fill="#f9a8be" opacity="0.7"/></svg>
+  </div>
+
+  <!-- Header Editorial Sakura (50px) -->
+  <header class="h-12 border-b border-[#ebc5cf] bg-[#fffbfc]/80 backdrop-blur-md px-5 flex items-center justify-between flex-shrink-0 z-20">
+    <div class="flex items-center gap-3">
+      <div class="w-7 h-7 rounded-full bg-[#e1375b] flex items-center justify-center text-[#fff5f7] font-mono font-bold text-[11px] tracking-wider shadow-sm">
+        DM
+      </div>
+      <div class="flex items-center gap-2.5">
+        <span class="text-sm font-extrabold tracking-tight text-[#24171a]">DeskMonitor</span>
+        <span class="text-[9px] uppercase font-mono px-2 py-0.5 rounded-full bg-[#fce7ec] text-[#9d2b46] border border-[#f2b8c7] font-semibold tracking-wider">
+          100% Local-First
+        </span>
+      </div>
+    </div>
+
+    <!-- Seletor de Modo Visual Central -->
+    <div class="flex items-center gap-0.5 sm:gap-1 bg-[#f9e4ea] p-0.5 sm:p-1 rounded-full border border-[#ecc4ce] text-xs">
+      <button id="btn-mode-ghost" class="px-2 sm:px-3 py-1 rounded-full font-semibold bg-[#24171a] text-[#fff5f7] shadow-sm transition text-[10px] sm:text-[11px]">
+        Ghost
+      </button>
+      <button id="btn-mode-video" class="px-2 sm:px-3 py-1 rounded-full font-semibold bg-transparent text-[#6e4f56] hover:text-[#24171a] transition text-[10px] sm:text-[11px]">
+        Video
+      </button>
+      <button id="btn-mode-stealth" class="px-2 sm:px-3 py-1 rounded-full font-semibold bg-transparent text-[#6e4f56] hover:text-[#24171a] transition text-[10px] sm:text-[11px]">
+        Stealth
+      </button>
+    </div>
+
+    <!-- Controles à Direita -->
+    <div class="flex items-center gap-2">
+      <button id="btn-audio-toggle" class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fff5f7] hover:bg-[#fce7ec] border border-[#ebc5cf] transition text-[11px] font-semibold text-[#24171a]">
+        <svg class="w-3.5 h-3.5 text-[#e1375b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+        </svg>
+        <span>Sons Ativos</span>
+      </button>
+
+      <a href="https://github.com/guimevn/deskmonitor" target="_blank" rel="noreferrer" class="p-1.5 rounded-full bg-[#24171a] hover:bg-[#3d262b] text-[#fff5f7] transition" title="Repositorio GitHub">
+        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+        </svg>
+      </a>
+    </div>
+  </header>
+
+  <!-- Conteudo Principal (Tela Unica, Sem Barra de Rolagem) -->
+  <main class="flex-1 min-h-0 p-3.5 grid grid-cols-1 lg:grid-cols-12 gap-3.5 overflow-hidden z-10">
+
+    <!-- Coluna Esquerda: Viewport & Controles Primários (7 colunas) -->
+    <section class="lg:col-span-7 flex flex-col gap-2.5 h-full min-h-0">
+
+      <!-- Viewport de Visão -->
+      <div class="relative flex-1 min-h-0 rounded-2xl overflow-hidden flex flex-col sakura-viewport">
+
+        <!-- Barra Superior do Viewport -->
+        <div class="px-3.5 py-2 bg-[#26161d]/95 border-b border-[#f47292]/20 flex items-center justify-between z-10 flex-shrink-0">
+          <div class="flex items-center gap-2">
+            <span class="inline-block w-2 h-2 rounded-full bg-[#f47292] animate-pulse"></span>
+            <span class="text-[11px] font-mono font-semibold text-[#fce7ec] tracking-wider">VIEWPORT DE VISAO</span>
+            <span class="text-[10px] font-mono text-[#c49aa6]">| ~3.3 FPS ECO</span>
+          </div>
+
+          <div class="flex items-center gap-1.5 text-[10px] font-mono text-[#e2b8c4]">
+            <svg class="w-3 h-3 text-[#f47292]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+            <span class="hidden sm:inline">Processamento 100% Offline</span>
+          </div>
+        </div>
+
+        <!-- Vídeo Oculto para Decodificação Nativa -->
+        <video id="webcam-video" autoplay playsinline muted class="absolute opacity-0 pointer-events-none -z-50 w-px h-px"></video>
+
+        <!-- Canvas Principal (16:9 Adaptativo) -->
+        <div class="relative flex-1 min-h-0 w-full bg-[#1d1217] flex items-center justify-center p-1">
+          <canvas id="wireframe-canvas" width="1280" height="720" class="w-full h-full object-contain rounded-xl"></canvas>
+        </div>
+      </div>
+
+      <!-- Barra de Estado Postural -->
+      <div class="px-3.5 py-2 rounded-xl sakura-card flex items-center justify-between gap-3 flex-shrink-0">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div id="status-badge" class="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-[#f5e6ea] text-[#6e4f56] border border-[#e5c8d0] flex-shrink-0">
+            STANDBY
+          </div>
+          <p id="status-description" class="text-xs text-[#24171a] truncate font-medium">
+            Inicie o monitoramento para processamento local de postura.
+          </p>
+        </div>
+
+        <div id="deviation-timer-badge" class="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-[#fdf2f5] text-[#6e4f56] border border-[#edd0d8] flex-shrink-0">
+          Sem desvios
+        </div>
+      </div>
+
+      <!-- Ações Primárias -->
+      <div class="grid grid-cols-2 gap-2.5 flex-shrink-0">
+        <button id="btn-toggle-camera" class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-[#e1375b] hover:bg-[#c8284a] text-[#fff5f7] font-bold text-xs tracking-wide transition shadow-md shadow-[#e1375b]/25 active:scale-[0.99]">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span>Iniciar Monitoramento</span>
+        </button>
+
+        <button id="btn-calibrate" disabled class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-[#24171a] hover:bg-[#3a252a] disabled:opacity-40 disabled:cursor-not-allowed text-[#fff5f7] font-bold text-xs tracking-wide transition active:scale-[0.99]">
+          <svg class="w-3.5 h-3.5 text-[#f9a8be]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+          </svg>
+          <span>Calibrar Posicao Neutra (3s)</span>
+        </button>
+      </div>
+
+    </section>
+
+    <!-- Coluna Direita: Métricas, Sakura Bonsai, Diagnósticos & Console (5 colunas) -->
+    <section class="lg:col-span-5 flex flex-col gap-2.5 h-full min-h-0">
+
+      <!-- Linha 1: 3 Cards de Telemetria (Postura, Foco, Água) -->
+      <div class="grid grid-cols-3 gap-2 flex-shrink-0">
+
+        <!-- Score de Postura -->
+        <div class="p-2.5 rounded-xl sakura-card flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-[9px] font-mono uppercase text-[#6e4f56] font-bold tracking-wider">Postura</span>
+            <span id="posture-score-text" class="text-base font-mono font-bold text-[#237a57]">100%</span>
+          </div>
+          <div class="w-full bg-[#f8e1e7] h-1.5 rounded-full overflow-hidden my-1.5">
+            <div id="posture-score-bar" class="h-full bg-[#237a57] rounded-full transition-all duration-300" style="width: 100%;"></div>
+          </div>
+          <div class="flex justify-between text-[9px] font-mono text-[#7c5c64]">
+            <span id="time-good-posture">00:00</span>
+            <span id="time-total-monitored">/ 00:00</span>
+          </div>
+        </div>
+
+        <!-- Foco & Presença -->
+        <div class="p-2.5 rounded-xl sakura-card flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-[9px] font-mono uppercase text-[#6e4f56] font-bold tracking-wider">Foco</span>
+            <div id="focus-status-badge" class="px-1.5 py-0.5 text-[8px] font-mono font-bold rounded-full bg-[#e6f6ef] text-[#1b5e43] border border-[#a7dfc7]">
+              ATIVO
+            </div>
+          </div>
+          <span id="focus-time-text" class="text-base font-mono font-bold text-[#24171a] my-0.5 font-mono-num">00:00:00</span>
+          <div class="flex items-center justify-between pt-0.5">
+            <button id="btn-focus-toggle" class="p-1 rounded-md bg-[#fce7ec] hover:bg-[#f7d0da] text-[#4a1c24] border border-[#ecc4ce] transition" title="Pausar / Retomar">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </button>
+            <button id="btn-focus-reset" class="p-1 rounded-md bg-[#fce7ec] hover:bg-[#f7d0da] text-[#6e4f56] hover:text-[#24171a] border border-[#ecc4ce] transition" title="Reiniciar">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Hidratação -->
+        <div class="p-2.5 rounded-xl sakura-card flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-[9px] font-mono uppercase text-[#6e4f56] font-bold tracking-wider">Agua</span>
+            <div class="flex items-center gap-1">
+              <button id="btn-water-sub" class="w-4 h-4 rounded-full bg-[#fce7ec] hover:bg-[#f7d0da] text-[#4a1c24] border border-[#ecc4ce] flex items-center justify-center text-[10px] font-mono font-bold leading-none">-</button>
+              <button id="btn-water-add" class="w-4 h-4 rounded-full bg-[#e1375b] hover:bg-[#c8284a] text-[#fff5f7] flex items-center justify-center text-[10px] font-mono font-bold leading-none">+</button>
+            </div>
+          </div>
+          <span id="water-glasses-text" class="text-base font-mono font-bold text-[#e1375b] my-0.5">0 copos</span>
+          <div class="w-full bg-[#f8e1e7] h-1.5 rounded-full overflow-hidden my-0.5">
+            <div id="water-progress-bar" class="h-full bg-[#e1375b] rounded-full transition-all duration-300" style="width: 0%;"></div>
+          </div>
+          <span id="water-ml-text" class="text-[8px] font-mono text-[#7c5c64] text-right">0 / 2000 ml</span>
+        </div>
+
+      </div>
+
+      <!-- Linha 2: Sakura Bonsai Virtual (Gamificação Positiva) -->
+      <div class="p-3 rounded-xl sakura-card flex-shrink-0">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] uppercase font-mono text-[#6e4f56] font-bold tracking-wider">Sakura Bonsai • Guardiao Zen</span>
+          <span class="text-[9px] font-mono font-semibold text-[#e1375b]">Gamificacao Positiva</span>
+        </div>
+        <div id="bonsai-container" class="w-full">
+          <!-- Renderizado dinamicamente via DeskBonsai (bonsai.js) -->
+        </div>
+      </div>
+
+      <!-- Linha 3: Diagnóstico Biomecânico -->
+      <div class="p-2.5 rounded-xl sakura-card flex-shrink-0">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-[10px] uppercase font-mono text-[#6e4f56] font-bold tracking-wider">Diagnostico Biomecanico</span>
+          <div id="doomscroll-badge" class="text-[9px] font-mono font-medium px-2 py-0.5 rounded-full bg-[#fdf2f5] text-[#6e4f56] border border-[#edd0d8]">
+            Visao Frontal Nominal
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-1.5 text-[10px] font-mono">
+          <div class="p-1.5 rounded-lg bg-[#fff5f7] border border-[#f2d3dc]">
+            <span class="text-[#7c5c64] block text-[9px]">Tronco (Slouch)</span>
+            <span id="metric-slouch" class="font-bold text-[#6e4f56]">--</span>
+          </div>
+          <div class="p-1.5 rounded-lg bg-[#fff5f7] border border-[#f2d3dc]">
+            <span class="text-[#7c5c64] block text-[9px]">Cervical (Z)</span>
+            <span id="metric-nerd-neck" class="font-bold text-[#6e4f56]">--</span>
+          </div>
+          <div class="p-1.5 rounded-lg bg-[#fff5f7] border border-[#f2d3dc]">
+            <span class="text-[#7c5c64] block text-[9px]">Ombros (Tilt)</span>
+            <span id="metric-shoulder-tilt" class="font-bold text-[#6e4f56]">--</span>
+          </div>
+        </div>
+
+        <div class="mt-1.5 pt-1 border-t border-[#f2d3dc] text-[9px] font-mono text-[#7c5c64] flex justify-between">
+          <span>Razao Y: <strong id="ref-neck-ratio" class="text-[#24171a]">--</strong></span>
+          <span>Profundidade Z: <strong id="ref-forward-z" class="text-[#24171a]">--</strong></span>
+        </div>
+      </div>
+
+      <!-- Linha 4: Console de Eventos -->
+      <div class="p-2.5 rounded-xl sakura-card flex-1 min-h-0 flex flex-col">
+        <div class="flex items-center justify-between mb-1 flex-shrink-0">
+          <span class="text-[10px] uppercase font-mono text-[#6e4f56] font-bold tracking-wider">Console de Eventos</span>
+          <span class="text-[9px] font-mono text-[#9c7b83]">Buffer: 30</span>
+        </div>
+        <div id="event-log-container" class="flex-1 min-h-0 overflow-y-auto pr-1 space-y-1 font-mono text-[10px]">
+          <!-- Logs inseridos dinamicamente -->
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Rodapé Editorial Minimalista (28px) -->
+  <footer class="h-7 border-t border-[#ebc5cf] bg-[#fffbfc]/85 px-4 sm:px-5 text-[10px] font-mono text-[#7c5c64] flex items-center justify-between flex-shrink-0 z-10 whitespace-nowrap overflow-hidden">
+    <div class="flex items-center gap-2 truncate">
+      <span class="text-[#24171a] font-bold">DeskMonitor</span>
+      <span class="hidden sm:inline">•</span>
+      <span class="hidden sm:inline">Visao computacional local via MediaPipe Pose (WebAssembly / WebGL)</span>
+    </div>
+    <div class="flex items-center gap-3 flex-shrink-0">
+      <span class="hidden md:inline">Zero telemetria de nuvem</span>
+      <span class="hidden md:inline">•</span>
+      <span>Licenca MIT</span>
+    </div>
+  </footer>
+
+  <!-- Script Principal -->
+  <script type="module" src="src/js/app.js"></script>
+</body>
+</html>
