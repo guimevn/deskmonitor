@@ -46,39 +46,57 @@ export class HydrationTracker {
     const rightHandPoints = [landmarks[16], landmarks[18], landmarks[20], landmarks[22]].filter(isVisible);
 
     let distLeft = 999;
-    let minLeftY = 999;
+    let closestLeft = null;
     for (const pt of leftHandPoints) {
       const d = Math.hypot(pt.x - mouth.x, pt.y - mouth.y) / shoulderWidth;
-      if (d < distLeft) distLeft = d;
-      if (pt.y < minLeftY) minLeftY = pt.y;
+      if (d < distLeft) {
+        distLeft = d;
+        closestLeft = pt;
+      }
     }
 
     let distRight = 999;
-    let minRightY = 999;
+    let closestRight = null;
     for (const pt of rightHandPoints) {
       const d = Math.hypot(pt.x - mouth.x, pt.y - mouth.y) / shoulderWidth;
-      if (d < distRight) distRight = d;
-      if (pt.y < minRightY) minRightY = pt.y;
+      if (d < distRight) {
+        distRight = d;
+        closestRight = pt;
+      }
     }
 
-    const minDist = Math.min(distLeft, distRight);
+    const isLeftActive = distLeft < distRight;
+    const minDist = isLeftActive ? distLeft : distRight;
+    const activePt = isLeftActive ? closestLeft : closestRight;
+    const activeElbow = isLeftActive ? landmarks[13] : landmarks[14];
+    const activeWristPt = isLeftActive ? landmarks[15] : landmarks[16];
     const nearThreshold = CONFIG.HYDRATION.DISTANCE_THRESHOLD;
 
-    const activeHandY = distLeft < distRight ? minLeftY : minRightY;
-    const isHandElevated = activeHandY < (midShoulderY + 0.15);
-
-    const timeSinceLastDrink = (now - this.lastDrinkTime) / 1000;
-    const inCooldown = timeSinceLastDrink < CONFIG.HYDRATION.COOLDOWN_SEC;
+    const isHandElevated = activePt ? activePt.y < (midShoulderY + 0.15) : false;
+    // Filtra toques acima do nariz (testa, olhos, óculos, cabelo) e laterais (orelha/bochecha)
+    const isNotAboveNose = activePt ? activePt.y >= (nose.y - CONFIG.HYDRATION.MAX_HAND_ABOVE_NOSE) : false;
+    const isHorizontallyAligned = activePt
+      ? (Math.abs(activePt.x - mouth.x) / shoulderWidth) <= CONFIG.HYDRATION.MAX_HORIZONTAL_OFFSET
+      : false;
+    // Se o cotovelo estiver visível no quadro, exige antebraço erguido em direção à boca
+    const isForearmRaised = (isVisible(activeElbow) && isVisible(activeWristPt))
+      ? activeWristPt.y <= (activeElbow.y + 0.05)
+      : true;
 
     this.currentDist = minDist;
-    const isCurrentlyNear = minDist < nearThreshold && isHandElevated;
+    const isCurrentlyNear =
+      minDist < nearThreshold &&
+      isHandElevated &&
+      isNotAboveNose &&
+      isHorizontallyAligned &&
+      isForearmRaised;
 
     if (isCurrentlyNear) {
       this.isNearMouth = true;
       this.lostTrackingTime = null;
-      this.activeWrist = distLeft < distRight ? 'left' : 'right';
+      this.activeWrist = isLeftActive ? 'left' : 'right';
 
-      if (!this.gestureActive && !inCooldown) {
+      if (!this.gestureActive) {
         this.gestureActive = true;
         this.gestureStartTime = now;
         this.drinkRegisteredForGesture = false;
@@ -113,7 +131,6 @@ export class HydrationTracker {
       activeWrist: this.activeWrist,
       glasses: this.glasses,
       totalMl: this.totalMl,
-      inCooldown,
       currentDist: this.currentDist,
       holdDurationSec: this.holdDurationSec,
       isRegistered: this.drinkRegisteredForGesture

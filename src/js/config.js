@@ -32,10 +32,11 @@ export const CONFIG = {
   // --- Fase 2: Hábitos Inteligentes ---
   // Hidratação (Auto-Hydration)
   HYDRATION: {
-    DISTANCE_THRESHOLD: 0.72,   // Margem ampliada para garrafas de 500ml/1L e copos longos
-    MIN_HOLD_SEC: 0.8,          // Tempo para validar o gole e registrar na hora
+    DISTANCE_THRESHOLD: 0.72,   // Margem ampliada para garrafas de 500ml/1L, Hydroflask e copos longos
+    MIN_HOLD_SEC: 1.2,          // Tempo sustentado para diferenciar gole real de toques rápidos no rosto
     MAX_HOLD_SEC: 10.0,         // Tempo máximo de ingestão contínua
-    COOLDOWN_SEC: 4.0,          // Cooldown de 4s para permitir novos goles sem bloqueios longos
+    MAX_HAND_ABOVE_NOSE: 0.04,  // Ignora mão acima do nariz (óculos, testa, cabelo)
+    MAX_HORIZONTAL_OFFSET: 0.65,// Alinhamento horizontal da mão em relação à boca (ignora orelha/lateral)
     GLASS_ML: 250,              // Volume por copo em ml
     DAILY_GOAL_ML: 2000         // Meta diária padrão em ml
   },

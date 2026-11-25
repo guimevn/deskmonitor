@@ -92,33 +92,49 @@ try {
   }
   assert.equal(analyzer.currentMetrics.isShoulderTilted, true);
 
-  // 2. HydrationTracker: gesto mão-boca >= 0.8s + cooldown 4s + manual
+  // 2. HydrationTracker: gesto de beber >= 1.2s, sem cooldown e filtrando falsos positivos
   let hydrationEvents = 0;
   const hydration = new HydrationTracker(() => { hydrationEvents++; });
-  const drinking = makeLandmarks({ 15: { x: 0.50, y: 0.36 } });
 
+  // Falso positivo: mão acima do nariz (óculos/testa/cabelo) não deve registrar
+  const touchingForehead = makeLandmarks({ 15: { x: 0.50, y: 0.20 }, 13: { x: 0.38, y: 0.55 } });
+  hydration.process(touchingForehead, 0.30);
+  mockNow += 1500;
+  hydration.process(touchingForehead, 0.30);
+  assert.equal(hydration.glasses, 0);
+
+  // Falso positivo: mão na lateral (orelha/bochecha) não deve registrar
+  const touchingEar = makeLandmarks({ 15: { x: 0.28, y: 0.35 }, 13: { x: 0.25, y: 0.55 } });
+  hydration.process(touchingEar, 0.30);
+  mockNow += 1500;
+  hydration.process(touchingEar, 0.30);
+  assert.equal(hydration.glasses, 0);
+
+  // Gesto real de beber (mão alinhada à boca, cotovelo abaixo do pulso)
+  const drinking = makeLandmarks({ 15: { x: 0.50, y: 0.36 }, 13: { x: 0.38, y: 0.60 } });
   hydration.process(drinking, 0.30);
   assert.equal(hydration.glasses, 0);
-  mockNow += 900;
+  mockNow += 1300;
   const hRes = hydration.process(drinking, 0.30);
   assert.equal(hRes.isRegistered, true);
   assert.equal(hydration.glasses, 1);
   assert.equal(hydration.totalMl, 250);
   assert.equal(hydrationEvents, 1);
 
-  // Cooldown: baixar e levantar dentro de 4s não deve duplicar
-  mockNow += 1000;
+  // Sem cooldown: baixa a mão (>600ms) e sobe de novo imediatamente para o 2º gole
   hydration.process(neutral, 0.30);
-  mockNow += 1000;
+  mockNow += 700;
+  hydration.process(neutral, 0.30);
   hydration.process(drinking, 0.30);
-  mockNow += 900;
+  mockNow += 1300;
   hydration.process(drinking, 0.30);
-  assert.equal(hydration.glasses, 1);
+  assert.equal(hydration.glasses, 2);
+  assert.equal(hydration.totalMl, 500);
 
   hydration.addManualGlass();
-  assert.equal(hydration.glasses, 2);
+  assert.equal(hydration.glasses, 3);
   hydration.removeManualGlass();
-  assert.equal(hydration.glasses, 1);
+  assert.equal(hydration.glasses, 2);
 
   // 3. DoomscrollDetector: olhar para baixo > 15s
   let doomAlerts = 0;
